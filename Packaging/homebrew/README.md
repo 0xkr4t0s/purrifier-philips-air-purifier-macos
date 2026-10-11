@@ -5,10 +5,9 @@ requires Gatekeeper-passing (signed and notarized) apps; a personal tap doesn't,
 Gatekeeper still applies on the user's Mac, so releases are notarized from day one (see
 `.github/workflows/release.yml`).
 
-1. Create a GitHub repo `<owner>/homebrew-tap`.
-2. Copy `purrifier.rb` to `Casks/purrifier.rb` there, filling in `OWNER`, the bundle ID
-   prefix, `version` and `sha256`.
-3. Users install with `brew install --cask <owner>/tap/purrifier`.
+1. Create a GitHub repo `0xKr4t0s/homebrew-tap`.
+2. Copy `purrifier.rb` to `Casks/purrifier.rb` there, filling in `version` and `sha256`.
+3. Users install with `brew install --cask 0xkr4t0s/tap/purrifier`.
 
 Without a paid Apple Developer account (no notarization), the second-best route is to tell
 users to run `xattr -dr com.apple.quarantine /Applications/Purrifier.app` after installing,

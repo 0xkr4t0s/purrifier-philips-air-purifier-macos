@@ -15,8 +15,9 @@ open Purrifier.xcodeproj   # or:
 xcodebuild -project Purrifier.xcodeproj -scheme Purrifier -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
 
-Before signing, set `bundleIdPrefix`/`PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` to your own
-reverse-DNS name (`dev.<owner>.purrifier`) and choose a development team.
+The bundle ID is `dev.0xkr4t0s.purrifier`. Forks should change `bundleIdPrefix` and
+`PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` to their own reverse-DNS name before signing, and
+choose a development team.
 
 ## Security posture
 
