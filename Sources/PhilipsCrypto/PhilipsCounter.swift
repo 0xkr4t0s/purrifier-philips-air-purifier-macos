@@ -21,9 +21,13 @@ public struct PhilipsCounter: Sendable, Hashable, CustomStringConvertible {
     }
 
     /// The numeric value. Always succeeds for a validated counter.
-    public var value: UInt64 { UInt64(hex, radix: 16) ?? 0 }
+    public var value: UInt64 {
+        UInt64(hex, radix: 16) ?? 0
+    }
 
-    public var description: String { hex }
+    public var description: String {
+        hex
+    }
 
     /// Returns the next counter under `policy`.
     public func incremented(policy: CounterWidthPolicy = .default) throws(PhilipsCryptoError) -> PhilipsCounter {

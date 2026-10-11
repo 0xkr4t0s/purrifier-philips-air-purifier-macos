@@ -39,7 +39,7 @@ struct SessionTests {
         defer { Task { await fake.stop(); await session.close() } }
 
         let reported = try await session.status()
-        #expect(reported == (try Self.auto()))
+        #expect(try reported == (Self.auto()))
         #expect(await session.generation == .gen3)
         #expect(await session.counter?.hex == "08ABBEC7")
         #expect(await session.lastMaxAge == 60)
@@ -101,14 +101,30 @@ struct SessionTests {
         defer { Task { await fake.stop(); await session.close() } }
         try await session.send(.mode(.turbo))
         let events = log.events
-        #expect(events.contains { if case .sent = $0 { true } else { false } })
-        #expect(events.contains { if case .received = $0 { true } else { false } })
+        #expect(events.contains {
+            if case .sent = $0 {
+                true
+            } else {
+                false
+            }
+        })
+        #expect(events.contains {
+            if case .received = $0 {
+                true
+            } else {
+                false
+            }
+        })
         let outgoing = events.compactMap { event -> String? in
-            if case let .decrypted(.outgoing, json) = event { json } else { nil }
+            if case let .decrypted(.outgoing, json) = event {
+                json
+            } else {
+                nil
+            }
         }
-        #expect(outgoing == [
-            #"{"state": {"desired": {"CommandType": "app", "DeviceId": "", "EnduserId": "", "D03102": 1, "D0310C": 18}}}"#,
-        ])
+        let expected = #"{"state": {"desired": {"CommandType": "app", "DeviceId": "", "EnduserId": "", "#
+            + #""D03102": 1, "D0310C": 18}}}"#
+        #expect(outgoing == [expected])
     }
 
     // MARK: Faults

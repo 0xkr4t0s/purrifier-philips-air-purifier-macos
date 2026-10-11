@@ -44,8 +44,13 @@ public enum LegacyPhilipsCipher {
         /// The ASCII bytes of `digestHex[16..<32]`.
         public let iv: [UInt8]
 
-        public var keyASCII: String { String(decoding: key, as: UTF8.self) }
-        public var ivASCII: String { String(decoding: iv, as: UTF8.self) }
+        public var keyASCII: String {
+            String(decoding: key, as: UTF8.self)
+        }
+
+        public var ivASCII: String {
+            String(decoding: iv, as: UTF8.self)
+        }
     }
 
     /// `h = uppercase hex(MD5(ASCII(secret + counter)))`; key = ASCII(h[0..<16]), iv = ASCII(h[16..<32]).
@@ -64,7 +69,10 @@ public enum LegacyPhilipsCipher {
     /// Builds a frame for an **already incremented** counter. The caller (the session actor)
     /// owns the counter and must call `PhilipsCounter.advance(policy:)` first; this function
     /// never changes it, which keeps it pure and testable against fixed vectors.
-    public static func seal(_ plaintext: some DataProtocol, counter: PhilipsCounter) throws(PhilipsCryptoError) -> String {
+    public static func seal(
+        _ plaintext: some DataProtocol,
+        counter: PhilipsCounter
+    ) throws(PhilipsCryptoError) -> String {
         let material = deriveKeyIV(counterHex: counter.hex)
         let ciphertext = try AESCBC.encrypt(Array(plaintext), key: material.key, iv: material.iv)
         let ciphertextHex = HexText.encode(ciphertext)
@@ -81,7 +89,9 @@ public enum LegacyPhilipsCipher {
         public let counter: String
         public let plaintext: [UInt8]
 
-        public var text: String? { String(data: Data(plaintext), encoding: .utf8) }
+        public var text: String? {
+            String(data: Data(plaintext), encoding: .utf8)
+        }
     }
 
     /// Verifies and decrypts a frame.

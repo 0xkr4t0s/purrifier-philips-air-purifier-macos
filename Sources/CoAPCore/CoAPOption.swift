@@ -39,17 +39,19 @@ public struct CoAPOption: Sendable, Hashable {
     }
 }
 
-extension CoAPOption {
+public extension CoAPOption {
     /// An option number. Odd numbers are "critical": a receiver that doesn't understand one
     /// must reject the message (RFC 7252 §5.4.1).
-    public struct Number: RawRepresentable, Sendable, Hashable, Comparable, CustomStringConvertible {
+    struct Number: RawRepresentable, Sendable, Hashable, Comparable, CustomStringConvertible {
         public var rawValue: UInt16
 
         public init(rawValue: UInt16) {
             self.rawValue = rawValue
         }
 
-        public var isCritical: Bool { rawValue & 1 == 1 }
+        public var isCritical: Bool {
+            rawValue & 1 == 1
+        }
 
         public static func < (lhs: Number, rhs: Number) -> Bool {
             lhs.rawValue < rhs.rawValue

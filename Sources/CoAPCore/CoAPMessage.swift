@@ -51,9 +51,9 @@ public struct CoAPMessage: Sendable, Hashable {
 
 // MARK: - Message type
 
-extension CoAPMessage {
+public extension CoAPMessage {
     /// The 2-bit message type (RFC 7252 §4.2–4.3).
-    public enum MessageType: UInt8, Sendable, CaseIterable, CustomStringConvertible {
+    enum MessageType: UInt8, Sendable, CaseIterable, CustomStringConvertible {
         /// Confirmable: the receiver must ACK or RST; the sender retransmits until it does.
         case confirmable = 0
         /// Non-confirmable: fire and forget.
@@ -76,9 +76,9 @@ extension CoAPMessage {
 
 // MARK: - Code
 
-extension CoAPMessage {
+public extension CoAPMessage {
     /// An 8-bit code split into a 3-bit class and a 5-bit detail, written `c.dd`.
-    public struct Code: RawRepresentable, Sendable, Hashable, CustomStringConvertible {
+    struct Code: RawRepresentable, Sendable, Hashable, CustomStringConvertible {
         public var rawValue: UInt8
 
         public init(rawValue: UInt8) {
@@ -91,13 +91,29 @@ extension CoAPMessage {
             rawValue = (codeClass << 5) | detail
         }
 
-        public var codeClass: UInt8 { rawValue >> 5 }
-        public var detail: UInt8 { rawValue & 0x1F }
+        public var codeClass: UInt8 {
+            rawValue >> 5
+        }
 
-        public var isEmpty: Bool { rawValue == 0 }
-        public var isRequest: Bool { codeClass == 0 && detail != 0 }
-        public var isResponse: Bool { codeClass >= 2 }
-        public var isSuccess: Bool { codeClass == 2 }
+        public var detail: UInt8 {
+            rawValue & 0x1F
+        }
+
+        public var isEmpty: Bool {
+            rawValue == 0
+        }
+
+        public var isRequest: Bool {
+            codeClass == 0 && detail != 0
+        }
+
+        public var isResponse: Bool {
+            codeClass >= 2
+        }
+
+        public var isSuccess: Bool {
+            codeClass == 2
+        }
 
         public var description: String {
             let detailText = detail < 10 ? "0\(detail)" : "\(detail)"
@@ -155,19 +171,19 @@ extension CoAPMessage {
 
 // MARK: - Convenience accessors
 
-extension CoAPMessage {
+public extension CoAPMessage {
     /// An Empty message (code 0.00): used for bare ACKs, RSTs and CoAP pings.
-    public static func empty(type: MessageType, messageID: UInt16) -> CoAPMessage {
+    static func empty(type: MessageType, messageID: UInt16) -> CoAPMessage {
         CoAPMessage(type: type, code: .empty, messageID: messageID)
     }
 
     /// The Uri-Path segments joined with `/`, with a leading slash (e.g. `/sys/dev/sync`).
-    public var uriPath: String {
+    var uriPath: String {
         "/" + options(.uriPath).map { String(decoding: $0.value, as: UTF8.self) }.joined(separator: "/")
     }
 
     /// Replaces all Uri-Path options with the segments of `path` (empty segments are dropped).
-    public mutating func setURIPath(_ path: String) {
+    mutating func setURIPath(_ path: String) {
         options.removeAll { $0.number == .uriPath }
         for segment in path.split(separator: "/", omittingEmptySubsequences: true) {
             options.append(CoAPOption(.uriPath, string: String(segment)))
@@ -176,23 +192,23 @@ extension CoAPMessage {
 
     /// The Observe option value, if present (RFC 7641). In a GET, 0 registers and 1 deregisters;
     /// in a notification it is a 24-bit sequence number.
-    public var observe: UInt32? {
+    var observe: UInt32? {
         get { options(.observe).first?.uintValue }
         set { setUInt(.observe, newValue) }
     }
 
     /// Max-Age in seconds (RFC 7252 §5.10.5). Absent means the default of 60 s.
-    public var maxAge: UInt32? {
+    var maxAge: UInt32? {
         get { options(.maxAge).first?.uintValue }
         set { setUInt(.maxAge, newValue) }
     }
 
-    public var contentFormat: UInt32? {
+    var contentFormat: UInt32? {
         get { options(.contentFormat).first?.uintValue }
         set { setUInt(.contentFormat, newValue) }
     }
 
-    public func options(_ number: CoAPOption.Number) -> [CoAPOption] {
+    func options(_ number: CoAPOption.Number) -> [CoAPOption] {
         options.filter { $0.number == number }
     }
 

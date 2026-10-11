@@ -11,11 +11,17 @@ enum StatusFormatter {
         rows.append(("Power", state.isOn.map { $0 ? "on" : "off" } ?? "unknown"))
         if state.capabilities.modes.isEmpty == false || state.rawMode != nil {
             var mode = state.mode?.rawValue ?? state.rawMode.map { "unknown (\($0.pythonJSON))" } ?? "unknown"
-            if let speed = state.fanSpeed { mode += " (fan speed \(speed))" }
+            if let speed = state.fanSpeed {
+                mode += " (fan speed \(speed))"
+            }
             rows.append(("Mode", mode))
         }
-        if let pm25 = state.pm25 { rows.append(("PM2.5", "\(pm25) µg/m³")) }
-        if let iai = state.allergenIndex { rows.append(("Allergen", "\(iai) (IAI)")) }
+        if let pm25 = state.pm25 {
+            rows.append(("PM2.5", "\(pm25) µg/m³"))
+        }
+        if let iai = state.allergenIndex {
+            rows.append(("Allergen", "\(iai) (IAI)"))
+        }
         if let index = state.preferredIndex {
             let text = switch index {
             case .allergenIndex: "allergen index"
@@ -29,10 +35,18 @@ enum StatusFormatter {
             let percent = state.filterRemainingFraction.map { " (\(Int(($0 * 100).rounded(.down)))%)" } ?? ""
             rows.append(("Filter", "\(remaining) / \(total) h\(percent)"))
         }
-        if let lock = state.childLock { rows.append(("Child lock", lock ? "on" : "off")) }
-        if let light = state.displayLight { rows.append(("Light", "\(light)")) }
-        if let error = state.errorCode { rows.append(("Error", error == 0 ? "none" : "code \(error)")) }
-        if let rssi = device.rssi { rows.append(("Wi-Fi", "\(rssi) dBm")) }
+        if let lock = state.childLock {
+            rows.append(("Child lock", lock ? "on" : "off"))
+        }
+        if let light = state.displayLight {
+            rows.append(("Light", "\(light)"))
+        }
+        if let error = state.errorCode {
+            rows.append(("Error", error == 0 ? "none" : "code \(error)"))
+        }
+        if let rssi = device.rssi {
+            rows.append(("Wi-Fi", "\(rssi) dBm"))
+        }
 
         let firmware = [
             state.generation.displayName,
@@ -48,9 +62,15 @@ enum StatusFormatter {
     static func line(_ state: PurifierState) -> String {
         let time = Date.now.formatted(date: .omitted, time: .standard)
         var parts = [time, state.isOn == true ? "on" : "off"]
-        if let mode = state.mode { parts.append(mode.rawValue) }
-        if let pm25 = state.pm25 { parts.append("PM2.5 \(pm25)") }
-        if let iai = state.allergenIndex { parts.append("IAI \(iai)") }
+        if let mode = state.mode {
+            parts.append(mode.rawValue)
+        }
+        if let pm25 = state.pm25 {
+            parts.append("PM2.5 \(pm25)")
+        }
+        if let iai = state.allergenIndex {
+            parts.append("IAI \(iai)")
+        }
         return parts.joined(separator: "  ")
     }
 }

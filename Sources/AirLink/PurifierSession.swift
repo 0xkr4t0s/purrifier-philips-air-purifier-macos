@@ -53,7 +53,12 @@ public actor PurifierSession {
         phase = .syncing
         let transport = try await connectedTransport()
         let nonce = Self.randomHex(byteCount: 4)
-        var request = CoAPMessage(type: configuration.messageType, code: .post, messageID: 0, payload: Array(nonce.utf8))
+        var request = CoAPMessage(
+            type: configuration.messageType,
+            code: .post,
+            messageID: 0,
+            payload: Array(nonce.utf8)
+        )
         request.setURIPath(Path.sync)
 
         let response = try await perform("sync", timeout: configuration.syncTimeout) {
@@ -231,7 +236,9 @@ public actor PurifierSession {
             }
         } catch {
             await transport.cancelObservation(token: observation.token)
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             throw mapError(error, operation: "observe")
         }
     }
@@ -278,7 +285,12 @@ public actor PurifierSession {
         logger?(.decrypted(direction: .outgoing, json: json))
 
         let transport = try await connectedTransport()
-        var request = CoAPMessage(type: configuration.messageType, code: .post, messageID: 0, payload: Array(frame.utf8))
+        var request = CoAPMessage(
+            type: configuration.messageType,
+            code: .post,
+            messageID: 0,
+            payload: Array(frame.utf8)
+        )
         request.setURIPath(Path.control)
         let response = try await perform("control", timeout: configuration.controlTimeout) {
             try await transport.request(request, timeout: self.configuration.controlTimeout)
@@ -377,30 +389,30 @@ public actor PurifierSession {
     private func mapError(_ error: any Error, operation: String, timeout: Duration? = nil) -> PurifierError {
         switch error {
         case let error as PurifierError:
-            return error
+            error
         case let error as TransportError:
             switch error {
             case .timeout:
-                return .timeout(
+                .timeout(
                     operation: operation, host: configuration.endpointDescription, after: timeout ?? .zero
                 )
             case .connectionRefused:
-                return .connectionRefused(host: configuration.endpointDescription)
+                .connectionRefused(host: configuration.endpointDescription)
             case let .unreachable(detail), let .invalidEndpoint(detail):
-                return .unreachable(host: configuration.endpointDescription, detail: detail)
+                .unreachable(host: configuration.endpointDescription, detail: detail)
             case .reset:
-                return .reset(operation: operation)
+                .reset(operation: operation)
             case .closed:
-                return .closed
+                .closed
             default:
-                return .transport(error.description)
+                .transport(error.description)
             }
         case is DeadlineExceeded:
-            return .timeout(operation: operation, host: configuration.endpointDescription, after: timeout ?? .zero)
+            .timeout(operation: operation, host: configuration.endpointDescription, after: timeout ?? .zero)
         case is CancellationError:
-            return .closed
+            .closed
         default:
-            return .transport(String(describing: error))
+            .transport(String(describing: error))
         }
     }
 
@@ -431,7 +443,8 @@ public actor PurifierSession {
     /// Payload text for error messages, truncated and with control characters removed.
     static func printable(_ payload: [UInt8]) -> String {
         let text = String(decoding: payload.prefix(200), as: UTF8.self)
-        let cleaned = String(text.unicodeScalars.map { $0.properties.generalCategory == .control ? "·" : Character($0) })
+        let cleaned = String(text.unicodeScalars
+            .map { $0.properties.generalCategory == .control ? "·" : Character($0) })
         return payload.count > 200 ? cleaned + "…" : cleaned
     }
 }

@@ -1,0 +1,57 @@
+# SwiftLint configuration (https://github.com/realm/SwiftLint). Formatting is SwiftFormat's job;
+# rules that fight it are disabled.
+included:
+  - Sources
+  - Tests
+  - Tools/FakePurifier
+  - App
+excluded:
+  - .build
+  - .swiftpm
+
+disabled_rules:
+  - todo                 # TODO(verify-…) markers are deliberate: they track unverified protocol facts
+  - trailing_comma       # SwiftFormat decides
+  - opening_brace        # SwiftFormat wraps multi-line conditions
+  - nesting              # nested types (Configuration, Faults…) read better than prefixed names
+  - optional_data_string_conversion  # String(decoding:as:) is deliberate: inputs are validated ASCII,
+                                     # and lossy decoding never throws on hostile bytes
+
+opt_in_rules:
+  - closure_spacing
+  - contains_over_first_not_nil
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - last_where
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+file_length:
+  warning: 600
+type_body_length:
+  warning: 400
+function_body_length:
+  warning: 80
+cyclomatic_complexity:
+  warning: 15
+identifier_name:
+  excluded: [id, iv, ok, on, to, off]
+large_tuple:
+  warning: 4
+
+custom_rules:
+  no_print_in_libraries:
+    name: "No print() in libraries"
+    included: "Sources/(CoAPCore|PhilipsCrypto|PurifierModel|AirLink)/"
+    regex: "\\bprint\\("
+    message: "Libraries must not print; use the WireLogger hook."
+    severity: error

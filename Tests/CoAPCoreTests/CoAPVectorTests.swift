@@ -1,6 +1,6 @@
-@testable import CoAPCore
 import Testing
 import TestSupport
+@testable import CoAPCore
 
 /// Golden-byte tests against datagrams encoded by aiocoap (see `Tools/gen_vectors.py`).
 struct CoAPVectorTests {
@@ -19,14 +19,16 @@ struct CoAPVectorTests {
         let payloadHex: String
         let bytesHex: String
 
-        var testDescription: String { name }
+        var testDescription: String {
+            name
+        }
 
         var message: CoAPMessage {
             let types: [String: CoAPMessage.MessageType] = [
                 "CON": .confirmable, "NON": .nonConfirmable, "ACK": .acknowledgement, "RST": .reset,
             ]
             return CoAPMessage(
-                type: types[type]!,
+                type: types[type] ?? .reset,
                 code: .init(rawValue: code),
                 messageID: messageID,
                 token: [UInt8](hex: tokenHex),

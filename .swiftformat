@@ -1,0 +1,12 @@
+# SwiftFormat configuration (https://github.com/nicklockwood/SwiftFormat)
+--swiftversion 6.0
+--exclude .build,.swiftpm,.venv,App/*.xcodeproj
+--indent 4
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--ranges spaced
+--header ignore
+--importgrouping testable-last
+--disable wrapMultilineStatementBraces

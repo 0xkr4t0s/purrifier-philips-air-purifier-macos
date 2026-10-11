@@ -4,7 +4,7 @@ import Foundation
 /// `#filePath`) rather than bundled as resources, so the Python generator and the Swift
 /// tests share one copy.
 public enum Fixtures {
-    public static let directory: URL = URL(fileURLWithPath: #filePath)
+    public static let directory: URL = .init(fileURLWithPath: #filePath)
         .deletingLastPathComponent() // TestSupport
         .deletingLastPathComponent() // Tests
         .appendingPathComponent("Fixtures", isDirectory: true)
@@ -30,13 +30,16 @@ public enum Fixtures {
     }
 }
 
-extension Array where Element == UInt8 {
+public extension [UInt8] {
     /// Test helper: bytes from uppercase or lowercase hex. Traps on invalid input.
-    public init(hex: String) {
+    init(hex: String) {
         let ascii = Array(hex.utf8)
         precondition(ascii.count.isMultiple(of: 2), "odd-length hex")
         self = stride(from: 0, to: ascii.count, by: 2).map { index in
-            UInt8(String(decoding: ascii[index ..< index + 2], as: UTF8.self), radix: 16)!
+            guard let byte = UInt8(String(decoding: ascii[index ..< index + 2], as: UTF8.self), radix: 16) else {
+                preconditionFailure("invalid hex: \(hex)")
+            }
+            return byte
         }
     }
 }

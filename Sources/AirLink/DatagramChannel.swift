@@ -20,7 +20,8 @@ public enum ChannelEvent: Sendable {
 
 /// Creates the channel for a session. Tests and the app can substitute their own.
 /// Should throw `TransportError`. (Untyped because typed-throws function types need macOS 15.)
-public typealias ChannelFactory = @Sendable (_ host: String, _ port: UInt16, _ timeout: Duration) async throws -> any DatagramChannel
+public typealias ChannelFactory = @Sendable (_ host: String, _ port: UInt16, _ timeout: Duration) async throws
+    -> any DatagramChannel
 
 /// A connected UDP socket to one host and port, on `NWConnection`.
 public final class UDPChannel: DatagramChannel {
@@ -38,7 +39,11 @@ public final class UDPChannel: DatagramChannel {
     ///
     /// UDP has no handshake, so readiness only means a route exists. On macOS 15+ a denied
     /// Local Network permission shows up here as a stuck `.waiting` state.
-    public static func connect(host: String, port: UInt16, timeout: Duration) async throws(TransportError) -> UDPChannel {
+    public static func connect(
+        host: String,
+        port: UInt16,
+        timeout: Duration
+    ) async throws(TransportError) -> UDPChannel {
         guard port > 0, let nwPort = NWEndpoint.Port(rawValue: port) else {
             throw .invalidEndpoint("port \(port) is out of range")
         }
@@ -73,7 +78,9 @@ public final class UDPChannel: DatagramChannel {
                             defer { done = true }
                             return !done
                         }
-                        if first { ready.resume(with: result) }
+                        if first {
+                            ready.resume(with: result)
+                        }
                     }
                     connection.stateUpdateHandler = { state in
                         switch state {

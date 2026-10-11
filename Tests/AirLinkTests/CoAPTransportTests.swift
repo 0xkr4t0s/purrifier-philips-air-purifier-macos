@@ -1,6 +1,6 @@
-@testable import AirLink
 import CoAPCore
 import Testing
+@testable import AirLink
 
 @Suite(.timeLimit(.minutes(1)))
 struct CoAPTransportTests {
@@ -141,7 +141,13 @@ struct CoAPTransportTests {
         #expect(request.observe == 0)
 
         func notification(mid: UInt16, sequence: UInt32, type: CoAPMessage.MessageType = .confirmable) -> CoAPMessage {
-            var message = CoAPMessage(type: type, code: .content, messageID: mid, token: request.token, payload: [UInt8(sequence)])
+            var message = CoAPMessage(
+                type: type,
+                code: .content,
+                messageID: mid,
+                token: request.token,
+                payload: [UInt8(sequence)]
+            )
             message.observe = sequence
             return message
         }
@@ -156,7 +162,9 @@ struct CoAPTransportTests {
         var received: [UInt8] = []
         for try await message in observation.messages {
             received.append(contentsOf: message.payload)
-            if received.count == 3 { break }
+            if received.count == 3 {
+                break
+            }
         }
         #expect(received == [5, 6, 7])
 
@@ -189,7 +197,12 @@ struct CoAPTransportTests {
         registration.observe = 0
         let observation = try await transport.observe(registration)
         let request = try #require(try await channel.waitForSent(count: 1).first)
-        try channel.inject(CoAPMessage(type: .acknowledgement, code: .content, messageID: request.messageID, token: request.token))
+        try channel.inject(CoAPMessage(
+            type: .acknowledgement,
+            code: .content,
+            messageID: request.messageID,
+            token: request.token
+        ))
         var count = 0
         for try await _ in observation.messages {
             count += 1
@@ -230,7 +243,7 @@ struct CoAPTransportTests {
         }
     }
 
-    @Test func messageIDsIncrementAndTokensDiffer() async throws {
+    @Test func messageIDsIncrementAndTokensDiffer() async {
         let channel = MockChannel()
         let transport = CoAPTransport(channel: channel, configuration: Self.fastConfiguration())
         for _ in 0 ..< 3 {
@@ -245,13 +258,18 @@ struct CoAPTransportTests {
 
     @Test(arguments: [
         (UInt32(5), UInt32(4), true), (4, 5, false), (5, 5, false),
-        (1, 0xFF_FFFF, true), // wrapped around
-        (0xFF_FFFF, 1, false),
+        (1, 0xFFFFFF, true), // wrapped around
+        (0xFFFFFF, 1, false),
     ] as [(UInt32, UInt32, Bool)])
     func observeFreshness(new: UInt32, old: UInt32, fresh: Bool) {
         let now = ContinuousClock.now
         #expect(CoAPTransport.isFresh(new, receivedAt: now, comparedTo: old, receivedAt: now) == fresh)
         // Anything more than 128 s later is fresh regardless.
-        #expect(CoAPTransport.isFresh(new, receivedAt: now.advanced(by: .seconds(129)), comparedTo: old, receivedAt: now))
+        #expect(CoAPTransport.isFresh(
+            new,
+            receivedAt: now.advanced(by: .seconds(129)),
+            comparedTo: old,
+            receivedAt: now
+        ))
     }
 }

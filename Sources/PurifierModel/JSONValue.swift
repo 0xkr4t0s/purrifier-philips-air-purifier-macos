@@ -14,9 +14,9 @@ public enum JSONValue: Sendable, Hashable {
 
 // MARK: - Typed access
 
-extension JSONValue {
+public extension JSONValue {
     /// The value as an integer: an `int`, or a `double` with no fractional part.
-    public var intValue: Int? {
+    var intValue: Int? {
         switch self {
         case let .int(value): Int(exactly: value)
         case let .double(value): Int(exactly: value)
@@ -25,33 +25,62 @@ extension JSONValue {
     }
 
     /// Like `intValue`, but also accepts decimal strings such as `"1"` (gen1 devices send those).
-    public var looseIntValue: Int? {
-        if let intValue { return intValue }
-        if case let .string(text) = self { return Int(text) }
+    var looseIntValue: Int? {
+        if let intValue {
+            return intValue
+        }
+        if case let .string(text) = self {
+            return Int(text)
+        }
         return nil
     }
 
-    public var stringValue: String? {
-        if case let .string(value) = self { value } else { nil }
+    var stringValue: String? {
+        if case let .string(value) = self {
+            value
+        } else {
+            nil
+        }
     }
 
-    public var boolValue: Bool? {
-        if case let .bool(value) = self { value } else { nil }
+    var boolValue: Bool? {
+        if case let .bool(value) = self {
+            value
+        } else {
+            nil
+        }
     }
 
-    public var objectValue: [String: JSONValue]? {
-        if case let .object(value) = self { value } else { nil }
+    var objectValue: [String: JSONValue]? {
+        if case let .object(value) = self {
+            value
+        } else {
+            nil
+        }
     }
 }
 
 extension JSONValue: ExpressibleByIntegerLiteral, ExpressibleByStringLiteral, ExpressibleByBooleanLiteral,
-    ExpressibleByFloatLiteral, ExpressibleByNilLiteral
-{
-    public init(integerLiteral value: Int64) { self = .int(value) }
-    public init(stringLiteral value: String) { self = .string(value) }
-    public init(booleanLiteral value: Bool) { self = .bool(value) }
-    public init(floatLiteral value: Double) { self = .double(value) }
-    public init(nilLiteral _: ()) { self = .null }
+    ExpressibleByFloatLiteral, ExpressibleByNilLiteral {
+    public init(integerLiteral value: Int64) {
+        self = .int(value)
+    }
+
+    public init(stringLiteral value: String) {
+        self = .string(value)
+    }
+
+    public init(booleanLiteral value: Bool) {
+        self = .bool(value)
+    }
+
+    public init(floatLiteral value: Double) {
+        self = .double(value)
+    }
+
+    public init(nilLiteral _: ()) {
+        self = .null
+    }
 }
 
 // MARK: - Codable
@@ -92,13 +121,13 @@ extension JSONValue: Codable {
 
 // MARK: - Parsing with bounds
 
-extension JSONValue {
+public extension JSONValue {
     /// Upper bound on any JSON document accepted from the network. A full AC0850 status is
     /// about 1 KB; anything near this size is not a purifier talking.
-    public static let maxDocumentBytes = 64 * 1024
+    static let maxDocumentBytes = 64 * 1024
 
     /// Parses untrusted bytes, refusing oversized documents before any work is done.
-    public static func parse(_ bytes: some Collection<UInt8>) throws(ModelError) -> JSONValue {
+    static func parse(_ bytes: some Collection<UInt8>) throws(ModelError) -> JSONValue {
         guard bytes.count <= maxDocumentBytes else { throw .documentTooLarge(bytes.count) }
         do {
             return try JSONDecoder().decode(JSONValue.self, from: Data(bytes))
@@ -136,7 +165,9 @@ extension JSONValue {
         case let .array(values):
             out += "["
             for (index, value) in values.enumerated() {
-                if index > 0 { out += ", " }
+                if index > 0 {
+                    out += ", "
+                }
                 value.write(into: &out)
             }
             out += "]"
@@ -149,7 +180,9 @@ extension JSONValue {
     static func writeObject(_ members: [(key: String, value: JSONValue)], into out: inout String) {
         out += "{"
         for (index, member) in members.enumerated() {
-            if index > 0 { out += ", " }
+            if index > 0 {
+                out += ", "
+            }
             writeString(member.key, into: &out)
             out += ": "
             member.value.write(into: &out)
@@ -179,9 +212,15 @@ extension JSONValue {
     }
 
     static func pythonFloat(_ value: Double) -> String {
-        if value.isNaN { return "NaN" }
-        if value.isInfinite { return value < 0 ? "-Infinity" : "Infinity" }
-        if value == value.rounded(), abs(value) < 1e16 { return String(format: "%.1f", value) }
+        if value.isNaN {
+            return "NaN"
+        }
+        if value.isInfinite {
+            return value < 0 ? "-Infinity" : "Infinity"
+        }
+        if value == value.rounded(), abs(value) < 1e16 {
+            return String(format: "%.1f", value)
+        }
         return String(value) // shortest round-trip repr, like Python's
     }
 }

@@ -1,6 +1,6 @@
-@testable import AirLink
 import CoAPCore
 import Foundation
+@testable import AirLink
 
 /// An in-memory `DatagramChannel`: tests inject datagrams "from the device" and inspect what
 /// the transport sent.

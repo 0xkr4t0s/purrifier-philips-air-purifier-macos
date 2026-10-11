@@ -31,13 +31,13 @@ struct GlobalOptions: ParsableArguments {
 
     func validate() throws {
         for (name, value) in [("sync", syncTimeout), ("status", statusTimeout), ("control", controlTimeout)]
-            where !(value > 0 && value <= 120)
-        {
+            where !(value > 0 && value <= 120) {
             throw ValidationError("--\(name)-timeout must be between 0 and 120 seconds.")
         }
     }
 
-    func configuration(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> SessionConfiguration {
+    func configuration(environment: [String: String] = ProcessInfo.processInfo
+        .environment) throws -> SessionConfiguration {
         guard let host = host ?? environment["PURRIFIER_HOST"].flatMap({ $0.isEmpty ? nil : $0 }) else {
             throw ValidationError("No device address. Pass --host <ip> or set PURRIFIER_HOST.")
         }
@@ -84,16 +84,15 @@ struct GlobalOptions: ParsableArguments {
 /// `--debug` output on stderr: each datagram as a one-line summary plus hex, and decrypted JSON.
 enum DebugPrinter {
     static let log: WireLogger = { event in
-        let line: String
-        switch event {
+        let line: String = switch event {
         case let .sent(bytes):
-            line = format("→", bytes)
+            format("→", bytes)
         case let .received(bytes):
-            line = format("←", bytes)
+            format("←", bytes)
         case let .decrypted(direction, json):
-            line = "\(direction.rawValue) decrypted: \(json)"
+            "\(direction.rawValue) decrypted: \(json)"
         case let .note(text):
-            line = "· \(text)"
+            "· \(text)"
         }
         FileHandle.standardError.write(Data((line + "\n").utf8))
     }

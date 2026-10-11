@@ -1,5 +1,5 @@
-@testable import CoAPCore
 import Testing
+@testable import CoAPCore
 
 struct CoAPCodecTests {
     // MARK: Hand-computed golden bytes
@@ -95,7 +95,7 @@ struct CoAPCodecTests {
     @Test func randomizedRoundTrip() throws {
         var generator = SystemRandomNumberGenerator()
         for _ in 0 ..< 500 {
-            let type = CoAPMessage.MessageType.allCases.randomElement(using: &generator)!
+            let type = try #require(CoAPMessage.MessageType.allCases.randomElement(using: &generator))
             let code = CoAPMessage.Code(rawValue: .random(in: 1 ... 255, using: &generator))
             let token = (0 ..< Int.random(in: 0 ... 8, using: &generator)).map { _ in UInt8.random(in: 0 ... 255) }
             let options = (0 ..< Int.random(in: 0 ... 6, using: &generator)).map { _ in
@@ -167,7 +167,9 @@ struct CoAPCodecTests {
         var generator = SystemRandomNumberGenerator()
         for _ in 0 ..< 5000 {
             var bytes = (0 ..< Int.random(in: 0 ... 40, using: &generator)).map { _ in UInt8.random(in: 0 ... 255) }
-            if !bytes.isEmpty { bytes[0] = (bytes[0] & 0x3F) | 0x40 } // mostly version 1
+            if !bytes.isEmpty {
+                bytes[0] = (bytes[0] & 0x3F) | 0x40
+            } // mostly version 1
             _ = try? CoAPMessage.decode(bytes)
         }
     }
@@ -175,7 +177,13 @@ struct CoAPCodecTests {
     // MARK: Description
 
     @Test func descriptionOmitsPayload() {
-        var message = CoAPMessage(type: .confirmable, code: .post, messageID: 0x1A2B, token: [0x0A], payload: [0x41, 0x42])
+        var message = CoAPMessage(
+            type: .confirmable,
+            code: .post,
+            messageID: 0x1A2B,
+            token: [0x0A],
+            payload: [0x41, 0x42]
+        )
         message.setURIPath("sys/dev/sync")
         #expect(message.description == "CON 0.02 POST mid=0x1A2B tok=0A /sys/dev/sync [2 B]")
     }

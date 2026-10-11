@@ -1,6 +1,6 @@
-@testable import PhilipsCrypto
 import Testing
 import TestSupport
+@testable import PhilipsCrypto
 
 /// Checks the Swift cipher against vectors produced by aioairctrl (`Tools/gen_vectors.py`).
 struct CryptoVectorTests {
@@ -11,7 +11,9 @@ struct CryptoVectorTests {
 
         struct Frame: Decodable, Sendable, CustomTestStringConvertible {
             let counter, plaintext, ciphertextHex, digest, frame: String
-            var testDescription: String { "\(counter) / \(plaintext.prefix(24))…" }
+            var testDescription: String {
+                "\(counter) / \(plaintext.prefix(24))…"
+            }
         }
 
         struct Encrypt: Decodable, Sendable {
@@ -25,7 +27,9 @@ struct CryptoVectorTests {
         struct Negative: Decodable, Sendable, CustomTestStringConvertible {
             let name, frame, error: String
             let referenceError: String?
-            var testDescription: String { name }
+            var testDescription: String {
+                name
+            }
         }
 
         let secret: String
@@ -37,8 +41,13 @@ struct CryptoVectorTests {
     }
 
     static let file: File? = try? Fixtures.decode(File.self, from: "crypto_vectors.json")
-    static var frames: [File.Frame] { file?.frames ?? [] }
-    static var negatives: [File.Negative] { file?.negative ?? [] }
+    static var frames: [File.Frame] {
+        file?.frames ?? []
+    }
+
+    static var negatives: [File.Negative] {
+        file?.negative ?? []
+    }
 
     @Test func vectorsLoaded() throws {
         let file = try #require(Self.file)
@@ -62,7 +71,8 @@ struct CryptoVectorTests {
     func sealMatchesReference(vector: File.Frame) throws {
         let frame = try LegacyPhilipsCipher.seal(vector.plaintext, counter: PhilipsCounter(hex: vector.counter))
         #expect(frame == vector.frame)
-        #expect(LegacyPhilipsCipher.digest(counterHex: vector.counter, ciphertextHex: vector.ciphertextHex) == vector.digest)
+        #expect(LegacyPhilipsCipher.digest(counterHex: vector.counter, ciphertextHex: vector.ciphertextHex) == vector
+            .digest)
     }
 
     @Test("open recovers the plaintext", arguments: frames)

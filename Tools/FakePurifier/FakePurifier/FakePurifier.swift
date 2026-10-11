@@ -117,7 +117,7 @@ public actor FakePurifier {
         if behavior.loopbackOnly {
             parameters.requiredInterfaceType = .loopback
         }
-        let listener = try NWListener(using: parameters, on: port == 0 ? .any : NWEndpoint.Port(rawValue: port)!)
+        let listener = try NWListener(using: parameters, on: NWEndpoint.Port(rawValue: port) ?? .any)
         self.listener = listener
         let sink = eventSink
         let idSource = PeerIDSource()
@@ -132,23 +132,28 @@ public actor FakePurifier {
                 self.handle(event)
             }
         }
-        let boundPort: UInt16 = try await withCheckedThrowingContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             let once = Once()
             listener.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    if once.claim() { continuation.resume(returning: listener.port?.rawValue ?? 0) }
+                    if once.claim() {
+                        continuation.resume(returning: listener.port?.rawValue ?? 0)
+                    }
                 case let .failed(error):
-                    if once.claim() { continuation.resume(throwing: error) }
+                    if once.claim() {
+                        continuation.resume(throwing: error)
+                    }
                 case .cancelled:
-                    if once.claim() { continuation.resume(throwing: CancellationError()) }
+                    if once.claim() {
+                        continuation.resume(throwing: CancellationError())
+                    }
                 default:
                     break
                 }
             }
             listener.start(queue: .global())
         }
-        return boundPort
     }
 
     public func stop() {
@@ -185,7 +190,11 @@ public actor FakePurifier {
 
     // MARK: - Networking
 
-    private nonisolated static func receive(on connection: NWConnection, id: Int, sink: AsyncStream<Event>.Continuation) {
+    private nonisolated static func receive(
+        on connection: NWConnection,
+        id: Int,
+        sink: AsyncStream<Event>.Continuation
+    ) {
         connection.receiveMessage { data, _, _, error in
             if let data, !data.isEmpty {
                 sink.yield(.datagram(id, Array(data)))
@@ -230,9 +239,17 @@ public actor FakePurifier {
         }
 
         let path = message.uriPath
-        requests.append(Request(path: path, type: message.type, code: message.code, messageID: message.messageID, peer: peer))
+        requests.append(Request(
+            path: path,
+            type: message.type,
+            code: message.code,
+            messageID: message.messageID,
+            peer: peer
+        ))
 
-        if faults.wedged { return }
+        if faults.wedged {
+            return
+        }
         if let remaining = faults.dropRequests[path], remaining > 0 {
             faults.dropRequests[path] = remaining - 1
             return
@@ -257,7 +274,12 @@ public actor FakePurifier {
     }
 
     /// Builds the response: piggybacked on an ACK for CON, a NON for NON (as aiocoap expects).
-    private func reply(to request: CoAPMessage, code: CoAPMessage.Code, payload: [UInt8], options: [CoAPOption] = []) -> CoAPMessage {
+    private func reply(
+        to request: CoAPMessage,
+        code: CoAPMessage.Code,
+        payload: [UInt8],
+        options: [CoAPOption] = []
+    ) -> CoAPMessage {
         let confirmable = request.type == .confirmable
         return CoAPMessage(
             type: confirmable ? .acknowledgement : .nonConfirmable,
@@ -281,7 +303,9 @@ public actor FakePurifier {
             return reply(to: message, code: .content, payload: Array(counter.utf8))
 
         case ("/sys/dev/status", .get):
-            if faults.ignoreStatusRequests { return nil }
+            if faults.ignoreStatusRequests {
+                return nil
+            }
             var options: [CoAPOption] = []
             if message.observe == 0 {
                 observers.removeAll { $0.peer == peer && $0.token == message.token }
@@ -352,7 +376,7 @@ public actor FakePurifier {
     }
 
     private func nextObserveSequence() -> UInt32 {
-        defer { observeSequence = (observeSequence + 1) & 0xFF_FFFF }
+        defer { observeSequence = (observeSequence + 1) & 0xFFFFFF }
         return observeSequence
     }
 
@@ -399,7 +423,9 @@ private final class Once: @unchecked Sendable {
     func claim() -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        if claimed { return false }
+        if claimed {
+            return false
+        }
         claimed = true
         return true
     }

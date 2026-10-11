@@ -27,7 +27,9 @@ public enum Hex {
     public static func encode(_ bytes: some Sequence<UInt8>, separator: String = "") -> String {
         var out = ""
         for (index, byte) in bytes.enumerated() {
-            if index > 0 { out += separator }
+            if index > 0 {
+                out += separator
+            }
             out.unicodeScalars.append(Unicode.Scalar(digits[Int(byte >> 4)]))
             out.unicodeScalars.append(Unicode.Scalar(digits[Int(byte & 0x0F)]))
         }

@@ -1,5 +1,5 @@
-@testable import AirLink
 import Testing
+@testable import AirLink
 
 struct ReliabilityTests {
     @Test func backoffCeilingDoublesToCap() {

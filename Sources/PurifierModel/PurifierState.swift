@@ -80,14 +80,17 @@ public struct PurifierState: Sendable, Hashable {
 
     public init(reported: [String: JSONValue], generation: KeyGeneration) {
         let map = KeyMap.forGeneration(generation)
-        func value(_ key: String?) -> JSONValue? { key.flatMap { reported[$0] } }
+        func value(_ key: String?) -> JSONValue? {
+            key.flatMap { reported[$0] }
+        }
 
         self.generation = generation
         raw = reported
 
         let power = reported[map.power]
         isOn = power.map { reported in
-            reported == map.powerOn || (reported.looseIntValue != nil && reported.looseIntValue == map.powerOn.looseIntValue)
+            reported == map
+                .powerOn || (reported.looseIntValue != nil && reported.looseIntValue == map.powerOn.looseIntValue)
         }
         rawMode = value(map.mode)
         mode = rawMode.flatMap { reportedMode in map.modeValues.first { $0.value == reportedMode }?.key }

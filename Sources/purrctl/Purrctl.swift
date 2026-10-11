@@ -23,7 +23,7 @@ struct Purrctl: AsyncParsableCommand {
         subcommands: [Sync.self, Status.self, Observe.self, Set.self, SetMode.self, Power.self]
     )
 
-    // Declared here too so that `purrctl --host X status` parses (options before the subcommand).
+    /// Declared here too so that `purrctl --host X status` parses (options before the subcommand).
     @OptionGroup var options: GlobalOptions
 }
 
@@ -53,7 +53,9 @@ extension Purrctl {
         var raw = false
 
         func validate() throws {
-            if json, raw { throw ValidationError("--json and --raw are mutually exclusive.") }
+            if json, raw {
+                throw ValidationError("--json and --raw are mutually exclusive.")
+            }
         }
 
         func run() async throws {
@@ -64,7 +66,7 @@ extension Purrctl {
                 } else if json {
                     print(JSONValue.object(snapshot.reported).pythonJSON)
                 } else {
-                    print(try StatusFormatter.summary(PurifierState(reported: snapshot.reported)))
+                    try print(StatusFormatter.summary(PurifierState(reported: snapshot.reported)))
                 }
             }
         }

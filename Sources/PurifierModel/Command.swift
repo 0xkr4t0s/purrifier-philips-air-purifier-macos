@@ -9,7 +9,9 @@ public struct DesiredValue: Sendable, Hashable, CustomStringConvertible {
         self.value = value
     }
 
-    public var description: String { "\(key)=\(value.pythonJSON)" }
+    public var description: String {
+        "\(key)=\(value.pythonJSON)"
+    }
 
     /// Parses `KEY=VALUE` with aioairctrl's `set` semantics: `true`/`false` become booleans,
     /// everything else is a string unless `asInteger` (`-I`) is set.
@@ -90,7 +92,9 @@ public enum ControlRequest {
     /// and checks `status == "success"`. We accept the exact text, or any JSON object whose
     /// `status` is `"success"` (so whitespace differences don't trigger a needless resync).
     public static func isSuccess(_ payload: some Collection<UInt8>) -> Bool {
-        if Array(payload) == Array(#"{"status":"success"}"#.utf8) { return true }
+        if Array(payload) == Array(#"{"status":"success"}"#.utf8) {
+            return true
+        }
         return (try? JSONValue.parse(payload))?.objectValue?["status"] == "success"
     }
 }

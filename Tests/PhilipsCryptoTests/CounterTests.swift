@@ -1,5 +1,5 @@
-@testable import PhilipsCrypto
 import Testing
+@testable import PhilipsCrypto
 
 struct CounterTests {
     @Test(arguments: ["", "G0000000", "0x000001", " 0000001", "11112222333344445"])
@@ -76,7 +76,10 @@ struct CipherTests {
         let frame = try LegacyPhilipsCipher.seal("hello", counter: PhilipsCounter(hex: "0000000A"))
         let ascii = Array(frame.utf8)
         let middle = String(decoding: ascii[8 ..< ascii.count - 64], as: UTF8.self).lowercased()
-        let lowered = String(decoding: ascii[..<8], as: UTF8.self) + middle + String(decoding: ascii.suffix(64), as: UTF8.self)
+        let lowered = String(decoding: ascii[..<8], as: UTF8.self) + middle + String(
+            decoding: ascii.suffix(64),
+            as: UTF8.self
+        )
         #expect(try LegacyPhilipsCipher.open(lowered).text == "hello")
     }
 

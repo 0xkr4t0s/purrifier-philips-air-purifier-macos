@@ -74,7 +74,9 @@ public actor CoAPTransport {
     }
 
     /// Number of requests and observations in flight (for tests and diagnostics).
-    public var pendingExchangeCount: Int { exchanges.count }
+    public var pendingExchangeCount: Int {
+        exchanges.count
+    }
 
     // MARK: - Requests
 
@@ -85,21 +87,14 @@ public actor CoAPTransport {
     ///
     /// - Throws: `TransportError` (`.timeout` once `timeout` elapses), or `CancellationError`.
     public func request(_ template: CoAPMessage, timeout: Duration) async throws -> CoAPMessage {
-        let (key, message, bytes) = try prepare(template)
+        let outgoing = try prepare(template)
         let deadline = clock.now.advanced(by: timeout)
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                register(
-                    key,
-                    waiter: .response(continuation),
-                    messageID: message.messageID,
-                    bytes: bytes,
-                    confirmable: message.type == .confirmable,
-                    deadline: deadline
-                )
+                register(outgoing, waiter: .response(continuation), deadline: deadline)
             }
         } onCancel: {
-            Task { await self.fail(key, with: CancellationError()) }
+            Task { await self.fail(outgoing.key, with: CancellationError()) }
         }
     }
 
@@ -108,24 +103,18 @@ public actor CoAPTransport {
     /// observing (a response without an Observe option, or an error code), and throws on
     /// RST, connection failure, or, for a CON registration, if it's never acknowledged.
     public func observe(_ template: CoAPMessage) throws -> Observation {
-        let (key, message, bytes) = try prepare(template)
+        let outgoing = try prepare(template)
         let (stream, continuation) = AsyncThrowingStream.makeStream(
             of: CoAPMessage.self,
             throwing: (any Error).self,
             bufferingPolicy: .bufferingNewest(32)
         )
+        let token = outgoing.key.bytes
         continuation.onTermination = { [weak self] _ in
-            Task { await self?.cancelObservation(token: key.bytes) }
+            Task { await self?.cancelObservation(token: token) }
         }
-        register(
-            key,
-            waiter: .observation(continuation),
-            messageID: message.messageID,
-            bytes: bytes,
-            confirmable: message.type == .confirmable,
-            deadline: nil
-        )
-        return Observation(token: message.token, messages: stream)
+        register(outgoing, waiter: .observation(continuation), deadline: nil)
+        return Observation(token: token, messages: stream)
     }
 
     /// Stops delivering notifications for `token`. Any further notification from the device
@@ -150,45 +139,50 @@ public actor CoAPTransport {
 
     // MARK: - Exchange bookkeeping
 
-    private func prepare(_ template: CoAPMessage) throws -> (TokenKey, CoAPMessage, [UInt8]) {
+    /// A message ready to go: identifiers assigned and encoded.
+    private struct Outgoing: Sendable {
+        let key: TokenKey
+        let messageID: UInt16
+        let bytes: [UInt8]
+        let confirmable: Bool
+    }
+
+    private func prepare(_ template: CoAPMessage) throws -> Outgoing {
         guard !isClosed else { throw TransportError.closed }
         startReceivingIfNeeded()
         var message = template
         message.messageID = allocateMessageID()
         message.token = newToken()
         do {
-            return try (TokenKey(bytes: message.token), message, message.encode())
+            return try Outgoing(
+                key: TokenKey(bytes: message.token),
+                messageID: message.messageID,
+                bytes: message.encode(),
+                confirmable: message.type == .confirmable
+            )
         } catch {
             throw TransportError.encodingFailed(error)
         }
     }
 
-    private func register(
-        _ key: TokenKey,
-        waiter: Waiter,
-        messageID: UInt16,
-        bytes: [UInt8],
-        confirmable: Bool,
-        deadline: ContinuousClock.Instant?
-    ) {
+    private func register(_ outgoing: Outgoing, waiter: Waiter, deadline: ContinuousClock.Instant?) {
         guard !Task.isCancelled else {
             Self.complete(waiter, with: .failure(CancellationError()))
             return
         }
-        exchanges[key] = Exchange(waiter: waiter, messageID: messageID)
-        tokenForMessageID[messageID] = key
+        let key = outgoing.key
+        exchanges[key] = Exchange(waiter: waiter, messageID: outgoing.messageID)
+        tokenForMessageID[outgoing.messageID] = key
         exchanges[key]?.driver = Task {
-            await self.drive(key, bytes: bytes, confirmable: confirmable, deadline: deadline)
+            await self.drive(outgoing, deadline: deadline)
         }
     }
 
     /// Sends the message, retransmits it while it's unacknowledged, and enforces the deadline.
-    private func drive(
-        _ key: TokenKey,
-        bytes: [UInt8],
-        confirmable: Bool,
-        deadline: ContinuousClock.Instant?
-    ) async {
+    private func drive(_ outgoing: Outgoing, deadline: ContinuousClock.Instant?) async {
+        let key = outgoing.key
+        let bytes = outgoing.bytes
+        let confirmable = outgoing.confirmable
         var interval = configuration.ackTimeout * Double.random(in: 1 ... max(1, configuration.ackRandomFactor))
         var retransmissions = 0
         guard await transmit(bytes, for: key) else { return }
@@ -220,7 +214,8 @@ public actor CoAPTransport {
             if let retransmitAt, now >= retransmitAt, !exchange.acknowledged {
                 retransmissions += 1
                 interval *= 2
-                logger?(.note("retransmission \(retransmissions)/\(configuration.maxRetransmit) of mid=0x\(Hex.encode(exchange.messageID))"))
+                let mid = Hex.encode(exchange.messageID)
+                logger?(.note("retransmission \(retransmissions)/\(configuration.maxRetransmit) of mid=0x\(mid)"))
                 guard await transmit(bytes, for: key) else { return }
             }
         }
@@ -273,7 +268,9 @@ public actor CoAPTransport {
         while true {
             let length = Int.random(in: configuration.tokenLength, using: &generator)
             let token = (0 ..< length).map { _ in UInt8.random(in: .min ... .max, using: &generator) }
-            if exchanges[TokenKey(bytes: token)] == nil { return token }
+            if exchanges[TokenKey(bytes: token)] == nil {
+                return token
+            }
         }
     }
 
@@ -367,13 +364,12 @@ public actor CoAPTransport {
 
         let key = TokenKey(bytes: message.token)
         let expected = exchanges[key] != nil && message.code.isResponse
-        let reply: [UInt8]?
-        if expected {
-            reply = message.type == .confirmable ? Self.emptyBytes(.acknowledgement, messageID: message.messageID) : nil
+        let reply: [UInt8]? = if expected {
+            message.type == .confirmable ? Self.emptyBytes(.acknowledgement, messageID: message.messageID) : nil
         } else {
             // Unknown token (e.g. a notification for an observation we cancelled) or an
             // unexpected request: reject it. RFC 7641 §3.6 lets RST answer a NON too.
-            reply = Self.emptyBytes(.reset, messageID: message.messageID)
+            Self.emptyBytes(.reset, messageID: message.messageID)
         }
         recentlyReceived[message.messageID] = (now, reply)
         if let reply {
@@ -400,8 +396,7 @@ public actor CoAPTransport {
             }
             let now = clock.now
             if let last = exchange.lastObserve,
-               !Self.isFresh(sequence, receivedAt: now, comparedTo: last.sequence, receivedAt: last.at)
-            {
+               !Self.isFresh(sequence, receivedAt: now, comparedTo: last.sequence, receivedAt: last.at) {
                 logger?(.note("dropped out-of-order notification (Observe \(sequence) after \(last.sequence))"))
                 return
             }
