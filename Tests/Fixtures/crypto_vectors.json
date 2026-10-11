@@ -212,13 +212,13 @@
       "name": "badPadding",
       "frame": "08ABBEC7E21EC52D21FA8D3783ECFB69F2989BF70877FD87135EF897ED5A6E70B0792A89EA37DC18C126550331B5FE10B41F46C9",
       "error": "badPadding",
-      "referenceError": "ValueError: Padding is incorrect."
+      "referenceError": "ValueError"
     },
     {
       "name": "wrongCounterValidDigest",
       "frame": "08ABBEC8E01545E3DAD666107122C1B47548D22E595AF8E7283AAA52B65C7089F50A54084C25EB648C4BD3366846F9B8BCC50C1E63E3181270CACEEAB666119E643039884753BA96263AB83CF0AA1E4627E4AABD4EA185064F6B51C3EC150FE6218F57450CC949F4B96093B93CE834CA522ACE262BD4E40B2849827DC8686D9AD3C534B0F86008E292727DC741FB5F45433DA208D9E208234F6E00DA141767FF3A5170E898BB8B67C2CDDE5C3E20AE1DE565EED1D47CB0FAD9687CF8185A58346A69358A",
       "error": "badPadding",
-      "referenceError": "ValueError: Padding is incorrect."
+      "referenceError": "ValueError"
     },
     {
       "name": "shortFrame",
@@ -236,13 +236,13 @@
       "name": "nineDigitCounter",
       "frame": "100000000032877DA772AEFA94EE0FBDFFA6040119D15458A4F73ACF522C5D55B869C689E7897C9B16BDEADF05011DB94D1ECBC3CB0D5177FB1AA34BFDAF3E07FE3D69227",
       "error": "malformedFrame",
-      "referenceError": "ValueError: fromhex() arg must contain an even number of hexadecimal digits"
+      "referenceError": "ValueError"
     },
     {
       "name": "partialBlock",
       "frame": "08ABBEC7E21EC52D21FA8D3783ECFB69F2989BF7E21EC52D21FA8D3705A60DF34C65EBC74121640D307A21C88DCD31C7FD08367694D4E5512899DF28",
       "error": "malformedFrame",
-      "referenceError": "ValueError: Data must be padded to 16 byte boundary in CBC mode"
+      "referenceError": "ValueError"
     }
   ]
 }

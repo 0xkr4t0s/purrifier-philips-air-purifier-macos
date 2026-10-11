@@ -89,8 +89,9 @@ def reference_decrypt_error(frame: str) -> str | None:
         EncryptionContext().decrypt(frame)
     except DigestMismatchException:
         return "DigestMismatchException"
-    except ValueError as exc:  # unpad() and bytes.fromhex() both raise ValueError
-        return f"ValueError: {exc}"
+    except ValueError:  # unpad() and bytes.fromhex() both raise ValueError
+        # Only the type: CPython rewords fromhex() errors between versions.
+        return "ValueError"
     return None
 
 

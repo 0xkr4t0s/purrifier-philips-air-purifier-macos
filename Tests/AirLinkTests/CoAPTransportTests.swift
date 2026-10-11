@@ -169,8 +169,10 @@ struct CoAPTransportTests {
         #expect(received == [5, 6, 7])
 
         // Each CON notification was ACKed, the duplicate ACKed again; the NON wasn't.
-        let acks = channel.sent.filter { $0.type == .acknowledgement }.map(\.messageID)
-        #expect(acks == [0x0A01, 0x0A01, 0x0A02])
+        // ACKs go out from detached tasks, so wait for them and ignore their order.
+        let sent = try await channel.waitForSent(count: 4)
+        let acks = sent.filter { $0.type == .acknowledgement }.map(\.messageID)
+        #expect(acks.sorted() == [0x0A01, 0x0A01, 0x0A02])
     }
 
     @Test func cancelledObservationRejectsLaterNotifications() async throws {
