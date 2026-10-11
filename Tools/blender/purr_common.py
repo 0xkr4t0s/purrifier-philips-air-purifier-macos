@@ -120,3 +120,24 @@ def hex_to_linear(h):
 
 def script_args(argv):
     return argv[argv.index("--") + 1:] if "--" in argv else []
+
+# --- animation slots (size in points; rendered at 2x) -----------------------------
+SLOTS = {
+    "A": {"name": "native",      "pt": (312, 132)},
+    "B": {"name": "air-quality", "pt": (312, 200)},
+    "C": {"name": "playful-cat", "pt": (304, 150)},
+    "D": {"name": "glass-remote", "pt": (306, 170)},
+}
+
+
+def slot_px(slot):
+    w, h = SLOTS[slot]["pt"]
+    return 2 * w, 2 * h
+
+
+# Airflow loop speed: whole cycles per 120-frame loop (integers => seamless loops)
+FLOW_CYCLES = {"sleep": 1, "auto": 2, "turbo": 4}
+# Fraction of streaks visible per mode, and overall opacity
+FLOW_DENSITY = {"sleep": 0.45, "auto": 0.75, "turbo": 1.0}
+FLOW_OPACITY = {"sleep": 0.55, "auto": 0.8, "turbo": 1.0}
+TRANSITION_FRAMES = 18     # 0.6 s at 30 fps
