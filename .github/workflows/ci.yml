@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & test (Swift)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        # HardwareTests skip themselves unless PURRIFIER_HIL_HOST is set; never set it in CI.
+        run: swift test
+      - name: Universal release build of purrctl
+        run: swift build -c release --arch arm64 --arch x86_64 --product purrctl
+
+  lint:
+    name: SwiftFormat & SwiftLint
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: brew install swiftformat swiftlint
+      - run: swiftformat --lint .
+      - run: swiftlint --strict
+
+  app:
+    name: Build menu bar app (unsigned)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: App
+      - run: >
+          xcodebuild -project Purrifier.xcodeproj -scheme Purrifier -configuration Release
+          CODE_SIGNING_ALLOWED=NO build
+        working-directory: App
+
+  vectors:
+    name: Test vectors are reproducible (Python reference)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r Tools/requirements.txt
+      - name: Regenerate vectors from aioairctrl / aiocoap
+        run: python Tools/gen_vectors.py
+      - name: Fail if the committed fixtures differ
+        run: git diff --exit-code -- Tests/Fixtures

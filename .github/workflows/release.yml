@@ -1,0 +1,109 @@
+# Release skeleton: builds, signs (Developer ID), notarizes and publishes on a version tag.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions). None are needed for CI;
+# without them this workflow builds unsigned artifacts and skips signing and notarization.
+#   DEVELOPER_ID_CERT_P12_BASE64   base64 of the "Developer ID Application" certificate (.p12)
+#   DEVELOPER_ID_CERT_PASSWORD     password for the .p12
+#   KEYCHAIN_PASSWORD              any random string (temporary keychain)
+#   DEVELOPER_ID_IDENTITY          e.g. "Developer ID Application: Jane Doe (TEAMID1234)"
+#   NOTARY_APPLE_ID                Apple ID e-mail used for notarization
+#   NOTARY_TEAM_ID                 10-character team ID
+#   NOTARY_APP_PASSWORD            app-specific password for notarytool
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      HAS_SIGNING: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 != '' }}
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Test
+        run: swift test
+
+      - name: Build purrctl (universal)
+        run: |
+          swift build -c release --arch arm64 --arch x86_64 --product purrctl
+          mkdir -p dist
+          cp "$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/purrctl" dist/purrctl
+          lipo -info dist/purrctl
+
+      - name: Build Purrifier.app (universal)
+        # TODO(M3): the app is a placeholder until milestone M3.
+        run: |
+          brew install xcodegen
+          (cd App && xcodegen generate)
+          xcodebuild -project App/Purrifier.xcodeproj -scheme Purrifier -configuration Release \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          cp -R build/Build/Products/Release/Purrifier.app dist/
+
+      - name: Import signing certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Sign (hardened runtime, secure timestamp)
+        if: env.HAS_SIGNING == 'true'
+        env:
+          IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: |
+          codesign --force --options runtime --timestamp --sign "$IDENTITY" dist/purrctl
+          codesign --force --options runtime --timestamp --sign "$IDENTITY" \
+            --entitlements App/Purrifier/Purrifier.entitlements dist/Purrifier.app
+          codesign --verify --strict --verbose=2 dist/Purrifier.app
+
+      - name: Package
+        run: |
+          (cd dist && zip -q "purrctl-$VERSION-macos-universal.zip" purrctl)
+          hdiutil create -volname Purrifier -srcfolder dist/Purrifier.app -ov -format UDZO "dist/Purrifier-$VERSION.dmg"
+
+      - name: Notarize and staple
+        if: env.HAS_SIGNING == 'true'
+        env:
+          APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
+          IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: |
+          codesign --force --timestamp --sign "$IDENTITY" "dist/Purrifier-$VERSION.dmg"
+          for artifact in "dist/Purrifier-$VERSION.dmg" "dist/purrctl-$VERSION-macos-universal.zip"; do
+            xcrun notarytool submit "$artifact" --apple-id "$APPLE_ID" --team-id "$TEAM_ID" \
+              --password "$APP_PASSWORD" --wait
+          done
+          xcrun stapler staple "dist/Purrifier-$VERSION.dmg"
+
+      - name: Checksums
+        run: (cd dist && shasum -a 256 *.dmg *.zip | tee SHA256SUMS.txt)
+
+      - name: Publish GitHub release (draft)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$VERSION" --draft --verify-tag \
+            --title "Purrifier $VERSION — for Philips Air+ purifiers" \
+            --notes "Native macOS control for Philips Air+ purifiers over local encrypted CoAP. Not affiliated with or endorsed by Philips or Versuni." \
+            dist/*.dmg dist/*.zip dist/SHA256SUMS.txt
