@@ -89,6 +89,17 @@ public actor PurifierSession {
     /// Reads the current status once: registers an observation, takes the first
     /// notification, then cancels it. Returns `state.reported`.
     public func status() async throws(PurifierError) -> [String: JSONValue] {
+        try await statusSnapshot().reported
+    }
+
+    /// A status read plus the decrypted document exactly as the device sent it.
+    public struct StatusSnapshot: Sendable {
+        public let reported: [String: JSONValue]
+        /// The decrypted JSON text (`{"state": {"reported": …}}`), for `--raw` output.
+        public let document: String
+    }
+
+    public func statusSnapshot() async throws(PurifierError) -> StatusSnapshot {
         try await withResyncRetry("status") {
             try await self.statusOnce()
         }
@@ -104,7 +115,7 @@ public actor PurifierSession {
         }
     }
 
-    private func statusOnce() async throws(PurifierError) -> [String: JSONValue] {
+    private func statusOnce() async throws(PurifierError) -> StatusSnapshot {
         if counter == nil {
             try await sync() // aioairctrl always syncs before talking to the device
         }
@@ -142,16 +153,15 @@ public actor PurifierSession {
         return try decryptStatus(first.payload)
     }
 
-    private func decryptStatus(_ payload: [UInt8]) throws(PurifierError) -> [String: JSONValue] {
+    private func decryptStatus(_ payload: [UInt8]) throws(PurifierError) -> StatusSnapshot {
         let opened: LegacyPhilipsCipher.Opened
         do {
             opened = try LegacyPhilipsCipher.open(String(decoding: payload, as: UTF8.self))
         } catch {
             throw .crypto(operation: "status", error)
         }
-        if let logger {
-            logger(.decrypted(direction: .incoming, json: opened.text ?? "<\(opened.plaintext.count) bytes, not UTF-8>"))
-        }
+        let document = opened.text ?? "<\(opened.plaintext.count) bytes, not UTF-8>"
+        logger?(.decrypted(direction: .incoming, json: document))
         let reported: [String: JSONValue]
         do {
             reported = try StatusDocument.reported(from: opened.plaintext)
@@ -161,7 +171,7 @@ public actor PurifierSession {
         if let detected = KeyGeneration.detect(in: reported) {
             generation = detected
         }
-        return reported
+        return StatusSnapshot(reported: reported, document: document)
     }
 
     // MARK: - Observe
@@ -214,7 +224,7 @@ public actor PurifierSession {
                 }
                 lastMaxAge = message.maxAge ?? lastMaxAge
                 do {
-                    try continuation.yield(decryptStatus(message.payload))
+                    try continuation.yield(decryptStatus(message.payload).reported)
                 } catch {
                     logger?(.note("skipped notification: \(error.localizedDescription)"))
                 }
@@ -273,7 +283,7 @@ public actor PurifierSession {
         let response = try await perform("control", timeout: configuration.controlTimeout) {
             try await transport.request(request, timeout: self.configuration.controlTimeout)
         }
-        logger?(.decrypted(direction: .incoming, json: Self.printable(response.payload)))
+        logger?(.note("control reply (plain text): \(Self.printable(response.payload))"))
         guard response.code.isSuccess else {
             throw .unexpectedResponse(operation: "control", code: response.code, body: Self.printable(response.payload))
         }
