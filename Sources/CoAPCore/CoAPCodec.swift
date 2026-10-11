@@ -1,7 +1,7 @@
 /// Errors thrown when a datagram is not a well-formed CoAP message (RFC 7252 §3).
 /// RFC 7252 calls all of these "message format errors": the receiver rejects the
 /// message (RST for a CON) or silently drops it.
-public enum CoAPDecodingError: Error, Sendable, Equatable {
+public enum CoAPDecodingError: Error, Sendable, Hashable {
     case truncatedHeader(length: Int)
     case unsupportedVersion(UInt8)
     /// TKL 9–15 is reserved.
@@ -17,7 +17,7 @@ public enum CoAPDecodingError: Error, Sendable, Equatable {
     case emptyPayloadAfterMarker
 }
 
-public enum CoAPEncodingError: Error, Sendable, Equatable {
+public enum CoAPEncodingError: Error, Sendable, Hashable {
     case tokenTooLong(Int)
     case optionValueTooLong(number: UInt16, length: Int)
     /// Empty (0.00) messages must not have a token, options or a payload.
