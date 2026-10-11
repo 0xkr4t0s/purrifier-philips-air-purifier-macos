@@ -16,3 +16,5 @@ refs/
 .render/
 # Blender auto-backups
 *.blend1
+# Local secrets (API keys) — never commit
+.env
