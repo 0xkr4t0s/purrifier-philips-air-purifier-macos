@@ -4,8 +4,7 @@
 # The generated .xcodeproj is not committed.
 name: Purrifier
 options:
-  # TODO(owner): replace "owner" with your reverse-DNS name (dev.<owner>.purrifier).
-  bundleIdPrefix: dev.owner
+  bundleIdPrefix: dev.0xkr4t0s
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -41,7 +40,7 @@ targets:
         product: PurifierModel
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.owner.purrifier
+        PRODUCT_BUNDLE_IDENTIFIER: dev.0xkr4t0s.purrifier
         PRODUCT_NAME: Purrifier
         INFOPLIST_FILE: Purrifier/Info.plist
         CODE_SIGN_ENTITLEMENTS: Purrifier/Purrifier.entitlements

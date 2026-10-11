@@ -1,6 +1,6 @@
 # Purrifier — instant local control for Philips Air+ purifiers on macOS
 
-[![CI](https://github.com/OWNER/purrifier-philips-air-purifier-macos/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/purrifier-philips-air-purifier-macos/actions/workflows/ci.yml)
+[![CI](https://github.com/0xKr4t0s/purrifier-philips-air-purifier-macos/actions/workflows/ci.yml/badge.svg)](https://github.com/0xKr4t0s/purrifier-philips-air-purifier-macos/actions/workflows/ci.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -56,12 +56,12 @@ listed, `purrctl --host <ip> status --raw` output in an issue helps a lot (consi
 
 ## Install
 
-- **Homebrew (personal tap):** `brew install --cask OWNER/tap/purrifier` _(after the first release)_
-- **DMG:** download from [Releases](https://github.com/OWNER/purrifier-philips-air-purifier-macos/releases) _(signed and notarized; after the first release)_
+- **Homebrew (personal tap):** `brew install --cask 0xkr4t0s/tap/purrifier` _(after the first release)_
+- **DMG:** download from [Releases](https://github.com/0xKr4t0s/purrifier-philips-air-purifier-macos/releases) _(signed and notarized; after the first release)_
 - **From source** (now):
 
   ```sh
-  git clone https://github.com/OWNER/purrifier-philips-air-purifier-macos.git
+  git clone https://github.com/0xKr4t0s/purrifier-philips-air-purifier-macos.git
   cd purrifier-philips-air-purifier-macos
   swift build -c release --product purrctl
   cp .build/release/purrctl /usr/local/bin/   # or anywhere on your PATH
